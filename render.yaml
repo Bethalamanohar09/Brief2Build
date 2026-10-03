@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: brief2build-ai
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm run install:all && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GEMMA_MODEL
+        value: gemma-4
+      - key: GEMINI_API_KEY
+        sync: false # Set privately in Render Dashboard

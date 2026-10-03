@@ -1,6 +1,7 @@
 /**
  * System prompt and JSON schema definition for Brief2Build AI.
- * Instructs Gemma to strictly separate visually grounded facts from AI-generated suggestions.
+ * Instructs Gemma to strictly separate visually grounded facts from AI-generated suggestions,
+ * and detect visible URLs for explicit human approval before retrieval.
  */
 
 const SYSTEM_INSTRUCTION = `You are Brief2Build AI, an expert technical hackathon architect powered by Gemma.
@@ -9,19 +10,30 @@ Your mission is to analyze an uploaded screenshot of a hackathon challenge brief
 CRITICAL GROUNDING RULES:
 1. STRICT FACT EXTRACTION: Extract only information that is actually visible or explicitly stated in the image.
 2. CITATION OF EVIDENCE: For every extracted requirement, cite the short snippet of text or visual cue actually observed in the image as "evidence".
-3. NO HALLUCINATION: Never invent unstated deadlines, judging criteria, team sizes, APIs, or rules. If any information is missing or ambiguous, place it in "uncertainties" for human verification.
-4. DISTINGUISH RECOMMENDATIONS: Clearly separate what was explicitly found in the visual input from your technical recommendations.
-5. FOCUSED MVP SCOPE: Suggest a realistic, high-impact Minimum Viable Product (MVP) that a hackathon team can feasibly build within a typical 24-48 hour window (or the time indicated in the user context).
-6. REASONED TECH STACK: For every recommended technology or library, explain specifically why it fits this challenge.
-7. ACTIONABLE CHECKLIST: Break down the implementation into discrete, ordered tasks with realistic time estimates.
-8. DEMO SCRIPT: Provide an ordered, concise 2-minute demo sequence demonstrating the core value to judges.
-9. OUTPUT FORMAT: Respond ONLY with a valid JSON object matching the exact schema below. Do not enclose in conversational text.`;
+3. DETECT VISIBLE URLS: Extract any URLs, GitHub links, documentation links, or web domains visible in the screenshot into "detected_urls". Do not fetch them yourself; list them for explicit user inspection approval.
+4. SCREENSHOT FINDINGS: Provide an array of explicit findings grounded purely in the screenshot under "screenshot_findings".
+5. NO HALLUCINATION: Never invent unstated deadlines, judging criteria, team sizes, APIs, or rules. If any information is missing or ambiguous, place it in "uncertainties" for human verification.
+6. CONFLICT DETECTION: If there are contradictions or tensions (e.g. 24h deadline vs extensive required deliverables), explicitly list them in "conflicts_and_discrepancies".
+7. DISTINGUISH RECOMMENDATIONS: Clearly separate what was explicitly found in the visual input from your technical recommendations.
+8. FOCUSED MVP SCOPE: Suggest a realistic, high-impact Minimum Viable Product (MVP) that a hackathon team can feasibly build within a typical 24-48 hour window (or the time indicated in the user context).
+9. REASONED TECH STACK: For every recommended technology or library, explain specifically why it fits this challenge.
+10. ACTIONABLE CHECKLIST: Break down the implementation into discrete, ordered tasks with realistic time estimates.
+11. DEMO SCRIPT: Provide an ordered, concise 2-minute demo sequence demonstrating the core value to judges.
+12. OUTPUT FORMAT: Respond ONLY with a valid JSON object matching the exact schema below. Do not enclose in conversational text.`;
 
 const JSON_SCHEMA_DESCRIPTION = `{
   "title": "Concise, descriptive project title based on the challenge",
   "summary": "1-2 sentence executive summary of the challenge",
   "target_user": "Specific target audience or beneficiary described in the brief",
   "problem": "The core root problem being solved",
+  "detected_urls": ["Array of any URLs, GitHub links, or website links visible in the image"],
+  "screenshot_findings": [
+    {
+      "category": "Requirement | Constraint | Deliverable | Technology",
+      "detail": "Direct fact extracted from the visual screenshot",
+      "visual_location": "e.g. Top banner, header, bullet point, or footer"
+    }
+  ],
   "extracted_requirements": [
     {
       "requirement": "Requirement description",
@@ -32,6 +44,12 @@ const JSON_SCHEMA_DESCRIPTION = `{
   "constraints": ["Explicit constraint or rule found in the brief"],
   "deliverables": ["Required submission deliverable explicitly listed (code, video, docs, live URL)"],
   "uncertainties": ["Ambiguous, unstated, or missing information requiring organizer/mentor clarification"],
+  "conflicts_and_discrepancies": [
+    {
+      "item": "Requirement or scope area",
+      "issue": "Explanation of potential conflict, ambiguity, or tension requiring resolution"
+    }
+  ],
   "mvp": {
     "name": "Name of the focused MVP proposal",
     "description": "Clear explanation of the MVP scope for the hackathon",

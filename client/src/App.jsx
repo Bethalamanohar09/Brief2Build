@@ -38,14 +38,19 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleStartAnalysis = async ({ file, context }) => {
+  const handleStartAnalysis = async ({ mode, file, challengeText, context }) => {
     setIsAnalyzing(true);
     setErrorInfo(null);
     setLastUploadedFile(file);
     setLastContext(context);
 
     const formData = new FormData();
-    formData.append('image', file);
+    if (file) {
+      formData.append('image', file);
+    }
+    if (challengeText) {
+      formData.append('challengeText', challengeText);
+    }
     if (context) {
       formData.append('context', context);
     }
@@ -59,7 +64,7 @@ export default function App() {
       const json = await response.json();
 
       if (!response.ok || !json.success) {
-        throw new Error(json.error || 'Failed to analyze challenge image.');
+        throw new Error(json.error || 'Failed to analyze challenge specification.');
       }
 
       setActiveAnalysis(json);
@@ -67,7 +72,10 @@ export default function App() {
       console.error('[ANALYSIS CLIENT ERROR]', err.message);
       setErrorInfo({
         message: err.message,
-        isKeyMissing: err.message.includes('GEMINI_API_KEY') || err.message.includes('API key')
+        isKeyMissing: 
+          err.message.includes('GOOGLE_API_KEY') || 
+          err.message.includes('GEMINI_API_KEY') || 
+          err.message.includes('API key')
       });
     } finally {
       setIsAnalyzing(false);
@@ -107,7 +115,7 @@ export default function App() {
             <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
               <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-950/60 border border-blue-800/50 text-xs text-blue-300 mb-4">
                 <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-ping" />
-                <span className="font-medium tracking-wide">Hacktoberfest Hack Day 2026 • Best Use of Gemma 4</span>
+                <span className="font-medium tracking-wide">Brief2Build AI • Powered by Gemma 4</span>
               </div>
 
               <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight sm:leading-tight mb-4">
@@ -285,7 +293,7 @@ export default function App() {
       <footer className="border-t border-slate-800/80 bg-slate-950 py-6 text-center text-xs text-slate-500">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>
-            Brief2Build AI — Hacktoberfest Hack Day 2026 Hyderabad (Best Use of Gemma 4)
+            Brief2Build AI — From Challenge Screenshot to Build-Ready Plan
           </p>
           <div className="flex items-center space-x-3 text-slate-400">
             <span>Server: <code className="text-slate-300 font-mono">{serverStatus}</code></span>

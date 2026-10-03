@@ -10,6 +10,7 @@ const cors = require('cors');
 
 const healthRouter = require('./routes/health');
 const analyzeRouter = require('./routes/analyze');
+const inspectRouter = require('./routes/inspect');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -30,6 +31,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/health', healthRouter);
 app.use('/api/health', healthRouter);
 app.use('/api/analyze', analyzeRouter);
+app.use('/api/inspect-url', inspectRouter);
 
 // API route placeholder for Checkpoint 1
 app.get('/api/status', (req, res) => {

@@ -22,33 +22,43 @@ const upload = multer({
 
 /**
  * POST /api/analyze
- * Receives an image and optional context, returns Gemma 4 structured analysis
+ * Receives either an image upload OR pasted challenge text + optional context
  */
 router.post('/', upload.single('image'), async (req, res, next) => {
   try {
-    if (!req.file) {
+    const hasImage = Boolean(req.file);
+    const challengeText = req.body?.challengeText?.trim() || '';
+    const optionalContext = req.body?.context?.trim() || '';
+
+    if (!hasImage && !challengeText) {
       return res.status(400).json({
         success: false,
-        error: 'No image uploaded. Please attach a challenge screenshot image.'
+        error: 'No challenge input provided. Please upload a screenshot or paste your challenge requirements text.'
       });
     }
 
-    const optionalContext = req.body.context || '';
-
-    console.log(`[ANALYZE ROUTE] Received image: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)} KB, ${req.file.mimetype})`);
-
-    const result = await gemmaService.analyzeChallenge(
-      req.file.buffer,
-      req.file.mimetype,
-      optionalContext
-    );
+    let result;
+    if (hasImage) {
+      console.log(`[ANALYZE ROUTE] Received image: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)} KB, ${req.file.mimetype})`);
+      result = await gemmaService.analyzeChallenge(
+        req.file.buffer,
+        req.file.mimetype,
+        optionalContext
+      );
+    } else {
+      console.log(`[ANALYZE ROUTE] Received pasted challenge text (${challengeText.length} characters)`);
+      result = await gemmaService.analyzeTextChallenge(
+        challengeText,
+        optionalContext
+      );
+    }
 
     return res.status(200).json(result);
   } catch (err) {
     console.error('[ANALYZE ROUTE ERROR]', err.message);
     return res.status(500).json({
       success: false,
-      error: err.message || 'An unexpected error occurred while analyzing the image.'
+      error: err.message || 'An unexpected error occurred while analyzing the challenge.'
     });
   }
 });
@@ -62,6 +72,7 @@ router.get('/config', (req, res) => {
     configured: gemmaService.isConfigured(),
     model: gemmaService.getModelName(),
     supported_formats: ['image/png', 'image/jpeg', 'image/webp'],
+    supported_modes: ['image_upload', 'text_paste'],
     max_size_mb: 10
   });
 });

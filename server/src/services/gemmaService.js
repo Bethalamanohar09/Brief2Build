@@ -3,24 +3,31 @@ const { SYSTEM_INSTRUCTION, buildAnalysisPrompt } = require('../prompts/analyzeP
 
 /**
  * Service to interface with Google GenAI / Gemini API using the configured Gemma 4 model.
+ * Supports both Multimodal (Screenshot/Image) and Text-only challenge analysis.
  */
 class GemmaService {
   constructor() {
-    this.apiKey = process.env.GEMINI_API_KEY;
-    // The exact model identifier confirmed by event organizers or configured via env
-    this.modelName = process.env.GEMMA_MODEL || 'gemma-4';
+    this.apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+    // Official multimodal Gemma 4 model in Gemini API or configured via env
+    this.modelName = process.env.GEMMA_MODEL_ID || process.env.GEMMA_MODEL || 'gemma-4-26b-a4b-it';
   }
 
   isConfigured() {
+    const key = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || this.apiKey;
     return Boolean(
-      this.apiKey && 
-      this.apiKey.trim().length > 0 && 
-      !this.apiKey.includes('your_gemini_api_key_here')
+      key && 
+      key.trim().length > 0 && 
+      !key.includes('your_google_api_key_here') &&
+      !key.includes('your_gemini_api_key_here')
     );
   }
 
+  getApiKey() {
+    return process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || this.apiKey;
+  }
+
   getModelName() {
-    return this.modelName;
+    return process.env.GEMMA_MODEL_ID || process.env.GEMMA_MODEL || this.modelName;
   }
 
   /**
@@ -49,25 +56,41 @@ class GemmaService {
       summary: data.summary || 'No summary provided in model output.',
       target_user: data.target_user || 'Target user not specified in input.',
       problem: data.problem || 'Core problem not explicitly stated in input.',
+      detected_urls: Array.isArray(data.detected_urls) 
+        ? data.detected_urls.filter(u => typeof u === 'string' && u.trim().length > 0)
+        : [],
+      screenshot_findings: Array.isArray(data.screenshot_findings)
+        ? data.screenshot_findings.map(f => ({
+            category: f.category || 'General Requirement',
+            detail: f.detail || '',
+            visual_location: f.visual_location || 'Screenshot input'
+          }))
+        : [],
       extracted_requirements: Array.isArray(data.extracted_requirements) 
         ? data.extracted_requirements.map((req, idx) => ({
             requirement: req.requirement || `Requirement ${idx + 1}`,
-            evidence: req.evidence || 'Observed in visual layout',
+            evidence: req.evidence || 'Observed in challenge input',
             type: req.type || 'explicit'
           }))
         : [],
       constraints: Array.isArray(data.constraints) ? data.constraints : [],
       deliverables: Array.isArray(data.deliverables) ? data.deliverables : [],
       uncertainties: Array.isArray(data.uncertainties) ? data.uncertainties : [],
+      conflicts_and_discrepancies: Array.isArray(data.conflicts_and_discrepancies)
+        ? data.conflicts_and_discrepancies.map(c => ({
+            item: c.item || 'Scope Area',
+            issue: c.issue || ''
+          }))
+        : [],
       mvp: {
         name: data.mvp?.name || 'Proposed MVP',
-        description: data.mvp?.description || 'Focused hackathon proof-of-concept.',
+        description: data.mvp?.description || 'Focused proof-of-concept build plan.',
         features: Array.isArray(data.mvp?.features) ? data.mvp.features : []
       },
       technology_stack: Array.isArray(data.technology_stack)
         ? data.technology_stack.map(item => ({
             technology: item.technology || 'Core Framework',
-            reason: item.reason || 'Optimal for hackathon speed and reliability'
+            reason: item.reason || 'Optimal for speed, reliability, and deployment simplicity'
           }))
         : [],
       implementation_plan: Array.isArray(data.implementation_plan)
@@ -102,11 +125,11 @@ class GemmaService {
   async analyzeChallenge(fileBuffer, mimeType, optionalContext = '') {
     if (!this.isConfigured()) {
       throw new Error(
-        'GEMINI_API_KEY is not configured. Please supply a valid Google Gemini API key in your .env file or Render environment variables.'
+        'GOOGLE_API_KEY (or GEMINI_API_KEY) is not configured. Please supply a valid Google Gemini API key in your .env file or Render environment variables.'
       );
     }
 
-    const ai = new GoogleGenAI({ apiKey: this.apiKey });
+    const ai = new GoogleGenAI({ apiKey: this.getApiKey() });
     const promptText = buildAnalysisPrompt(optionalContext);
 
     const imagePart = {
@@ -116,15 +139,17 @@ class GemmaService {
       }
     };
 
+    const activeModel = this.getModelName();
+
     try {
-      console.log(`[GEMMA SERVICE] Sending request to model: ${this.modelName} via Gemini API`);
+      console.log(`[GEMMA SERVICE] Sending multimodal request to model: ${activeModel}`);
       
       const response = await ai.models.generateContent({
-        model: this.modelName,
+        model: activeModel,
         contents: [imagePart, promptText],
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.2 // Low temperature for high factual precision and schema compliance
+          temperature: 0.2
         }
       });
 
@@ -146,14 +171,73 @@ class GemmaService {
 
       return {
         success: true,
-        model_used: this.modelName,
+        model_used: activeModel,
+        input_type: 'image',
         analyzed_at: new Date().toISOString(),
         data: normalized
       };
     } catch (err) {
       console.error('[GEMMA SERVICE ERROR]', err);
-      // Re-throw sanitized error for API response
       throw new Error(err.message || 'Failed to complete Gemma 4 multimodal analysis.');
+    }
+  }
+
+  /**
+   * Performs text-only challenge analysis when user pastes challenge text
+   */
+  async analyzeTextChallenge(challengeText, optionalContext = '') {
+    if (!this.isConfigured()) {
+      throw new Error(
+        'GOOGLE_API_KEY (or GEMINI_API_KEY) is not configured. Please supply a valid Google Gemini API key in your .env file or Render environment variables.'
+      );
+    }
+
+    const ai = new GoogleGenAI({ apiKey: this.getApiKey() });
+    let combinedInput = `CHALLENGE STATEMENT / REQUIREMENT SPECIFICATION:\n"""\n${challengeText.trim()}\n"""\n`;
+    if (optionalContext && optionalContext.trim().length > 0) {
+      combinedInput += `\nUSER CONTEXT & TEAM CONSTRAINTS:\n"""\n${optionalContext.trim()}\n"""\n`;
+    }
+    const promptText = buildAnalysisPrompt(combinedInput);
+    const activeModel = this.getModelName();
+
+    try {
+      console.log(`[GEMMA SERVICE] Sending text analysis request to model: ${activeModel}`);
+      
+      const response = await ai.models.generateContent({
+        model: activeModel,
+        contents: [promptText],
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          temperature: 0.2
+        }
+      });
+
+      const responseText = response.text;
+      if (!responseText) {
+        throw new Error('Gemma returned an empty response.');
+      }
+
+      const cleanedJson = this.cleanJsonResponse(responseText);
+      let parsedData;
+      try {
+        parsedData = JSON.parse(cleanedJson);
+      } catch (parseErr) {
+        console.error('[GEMMA SERVICE] JSON parse failed on text:', cleanedJson);
+        throw new Error('Model produced non-JSON output. Please retry or adjust prompt context.');
+      }
+
+      const normalized = this.normalizeSchema(parsedData);
+
+      return {
+        success: true,
+        model_used: activeModel,
+        input_type: 'text',
+        analyzed_at: new Date().toISOString(),
+        data: normalized
+      };
+    } catch (err) {
+      console.error('[GEMMA SERVICE ERROR]', err);
+      throw new Error(err.message || 'Failed to complete Gemma 4 text analysis.');
     }
   }
 }

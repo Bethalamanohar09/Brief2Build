@@ -2,13 +2,14 @@
   "name": "brief2build-ai",
   "version": "1.0.0",
   "private": true,
-  "description": "Brief2Build AI — From Challenge Screenshot to Build-Ready Plan (Hacktoberfest Hack Day 2026)",
+  "description": "Brief2Build AI — From Challenge Screenshot to Build-Ready Plan",
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "dev:server": "npm run dev --prefix server",
     "dev:client": "npm run dev --prefix client",
     "build": "npm run build --prefix client",
     "start": "node server/src/index.js",
+    "test": "npm test --prefix server",
     "install:all": "npm install && npm install --prefix server && npm install --prefix client"
   },
   "devDependencies": {

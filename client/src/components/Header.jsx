@@ -19,12 +19,12 @@ export default function Header({ serverStatus }) {
           </div>
         </div>
 
-        {/* Center Badge: Hackathon category */}
+        {/* Center Badge */}
         <div className="hidden md:flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-xs text-slate-300">
           <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-          <span>Hacktoberfest Hack Day 2026</span>
+          <span>Multimodal Challenge Architect</span>
           <span className="text-slate-500">•</span>
-          <span className="text-blue-400 font-medium">Best Use of Gemma 4</span>
+          <span className="text-blue-400 font-medium">Powered by Gemma 4</span>
         </div>
 
         {/* Server & Status Indicator */}

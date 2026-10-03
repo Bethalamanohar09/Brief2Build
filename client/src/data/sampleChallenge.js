@@ -1,93 +1,141 @@
 /**
- * Sample Challenge Brief for instant demonstration during judging and testing.
- * Modelled directly on the official Hacktoberfest Hack Day 2026 "Best Use of Gemma 4" challenge.
+ * Generic Sample Challenge Brief for Brief2Build AI.
+ * Demonstrates the full multimodal workflow, grounded visual extraction, and website intelligence.
  */
 
-// Base64 encoded high-contrast sample challenge graphic for quick demonstration
-export const SAMPLE_CHALLENGE_TITLE = "Hack Day 2026 — Gemma 4 Multimodal Challenge";
+export const SAMPLE_CHALLENGE_TITLE = "EcoRoute AI — Sustainable Mobility & Carbon Optimization";
+
+export const SAMPLE_CHALLENGE_TEXT = `CHALLENGE STATEMENT: EcoRoute AI
+Build a focused web application that ingests urban transit routes, extracts carbon emission factors, and synthesizes an optimized, multi-modal travel roadmap.
+
+CORE REQUIREMENTS:
+1. Meaningfully integrate Gemma 4 through the Gemini API for multimodal intelligence.
+2. Ingest transit screenshots or commute schedules and extract explicit constraints with evidence citations.
+3. Build one focused user story with an interactive, end-to-end working prototype.
+4. Calculate comparative carbon footprint savings across transit modes (metro, bus, cycling, EV).
+5. Deploy a working version to a cloud web service with a public live URL and /health endpoint.
+6. Provide an interactive team checklist and exportable project plan.
+
+CONSTRAINTS & RULES:
+- Development Window: 24-hour rapid development sprint.
+- No heavy database or payment gateway bloat; focus on core MVP user journey.
+- Ground all extracted facts; strictly separate visible constraints from AI suggestions.
+- Reference documentation: https://ai.google.dev/gemma`;
 
 export const SAMPLE_CHALLENGE_CONTEXT = 
-  "Team size: 3 engineers (1 Frontend, 1 Fullstack, 1 AI/ML). Time remaining: 24 hours. Primary judging criteria: Real Gemma multimodal integration, working functional prototype, and clear UI separation of extracted facts vs suggestions.";
+  "Team size: 3 engineers (1 Frontend, 1 Backend, 1 AI/ML). Time remaining: 24 hours. Primary focus: high-reliability prototype, real Gemma 4 integration, and clear separation of extracted facts vs suggestions.";
 
 export const SAMPLE_DEMO_RESULT = {
   success: true,
-  model_used: "gemma-4 (via Gemini API)",
+  model_used: "gemma-4-26b-a4b-it",
+  input_type: "sample_demonstration",
   analyzed_at: new Date().toISOString(),
   data: {
-    title: "Brief2Build AI — Gemma 4 Challenge Execution Plan",
-    summary: "Build a focused web application that ingests visual screenshots of hackathon challenge briefs, extracts explicit requirements with visual citations, and synthesizes an editable MVP build plan using Gemma 4.",
-    target_user: "Hackathon participants and student engineering teams struggling to decipher complex visual requirements under tight deadlines.",
-    problem: "Hackathon teams waste hours debating ambiguous challenge screenshots and manual task division instead of executing their MVP build.",
+    title: "EcoRoute AI — Sustainable Mobility & Transit Optimizer",
+    summary: "A focused transit intelligence application that analyzes multimodal travel schedules, extracts explicit constraints, and generates an optimized low-emission commute plan.",
+    target_user: "Urban commuters, student teams, and logistics coordinators seeking to reduce carbon footprints without increasing travel time.",
+    problem: "Commuters struggle to decipher fragmented transit schedules and lack immediate visibility into carbon trade-offs between transit options.",
+    detected_urls: [
+      "https://ai.google.dev/gemma"
+    ],
+    screenshot_findings: [
+      {
+        category: "Requirement",
+        detail: "Must process multimodal input (schedules, screenshots) through Gemini API.",
+        visual_location: "Core Requirements Box (Item 1 & 2)"
+      },
+      {
+        category: "Deliverable",
+        detail: "Provide an end-to-end working prototype with live deployment URL and /health check.",
+        visual_location: "Core Requirements Box (Item 3 & 5)"
+      },
+      {
+        category: "Constraint",
+        detail: "Strict 24-hour sprint timeframe with lean tech stack.",
+        visual_location: "Constraints & Rules Box"
+      },
+      {
+        category: "Reference Link",
+        detail: "Official documentation link visible on reference bar.",
+        visual_location: "Footer documentation bar"
+      }
+    ],
     extracted_requirements: [
       {
-        requirement: "Meaningfully use Gemma 4 through the Gemini API with multimodal input (images/screenshots).",
-        evidence: "Official Challenge: Meaningfully use Gemma 4 through the Gemini API. Use multimodal input, especially images and screenshots.",
+        requirement: "Meaningfully use Gemma 4 through the Gemini API for multimodal challenge understanding.",
+        evidence: "1. Meaningfully integrate Gemma 4 through the Gemini API for multimodal intelligence.",
         type: "explicit"
       },
       {
-        requirement: "Build one focused experience with one clear user story; no generic chatbots or multi-agent bloat.",
-        evidence: "Build one focused experience with one clear user story. Do not expand into a generic chatbot or multi-agent system.",
+        requirement: "Ingest transit screenshots and extract explicit constraints with evidence citations.",
+        evidence: "2. Ingest transit screenshots or commute schedules and extract explicit constraints with evidence citations.",
         type: "explicit"
       },
       {
-        requirement: "Provide a functional end-to-end working prototype with Gemma result obvious in first 30 seconds of demo.",
-        evidence: "Provide a functional, end-to-end working prototype. Make the Gemma-powered result obvious within first 30 seconds.",
+        requirement: "Build one focused user story with an interactive, end-to-end working prototype.",
+        evidence: "3. Build one focused user story with an interactive, end-to-end working prototype.",
         type: "explicit"
       },
       {
-        requirement: "Deploy a working version to Render Web Service and provide public live URL.",
-        evidence: "Deploy a working version to Render... Express should serve the built Vite frontend and handle /api routes.",
+        requirement: "Calculate comparative carbon footprint savings across transit modes.",
+        evidence: "4. Calculate comparative carbon footprint savings across transit modes (metro, bus, cycling, EV).",
         type: "explicit"
       },
       {
-        requirement: "Publish public GitHub repo with MIT License and thorough README; zero exposed secrets.",
-        evidence: "Publish source code in a public GitHub repository. Include an open-source license, such as MIT. Never expose API keys.",
+        requirement: "Deploy working application to cloud web service with /health monitoring endpoint.",
+        evidence: "5. Deploy a working version to a cloud web service with a public live URL and /health endpoint.",
         type: "explicit"
       }
     ],
     constraints: [
-      "No model training — use official supported existing Gemma model/API",
-      "No database or complex auth bloat unless core workflow is complete",
-      "Render single web service architecture (Express serving built Vite frontend)",
-      "Strict data privacy: server-side memory processing; never store user images permanently"
+      "24-hour rapid development sprint window",
+      "No database or complex payment bloat; keep architecture lightweight",
+      "Strict data privacy: process images in RAM; never store user files permanently",
+      "Single-service cloud deployment with health check"
     ],
     deliverables: [
-      "Public GitHub repository with clean commit history",
-      "Live deployed URL on Render",
+      "Public GitHub repository with MIT License and clean commit history",
+      "Live deployed URL on Render or equivalent cloud service",
       "2-minute judge video demonstration",
-      "Comprehensive README with architecture & prompt documentation"
+      "Architecture diagram and prompt documentation in README"
     ],
     uncertainties: [
-      "Exact Gemma 4 model string identifier from event organizers (placeholder configured)",
-      "Specific rate limits or token allowances on the provided hackathon API key"
+      "Exact municipal transit open data API refresh frequency",
+      "Specific rate limits or token allowances on configured API key"
+    ],
+    conflicts_and_discrepancies: [
+      {
+        item: "Sprint Scope vs Feature Count",
+        issue: "Brief outlines 6 distinct deliverables within 24 hours. Recommendation: Focus on 1 primary user flow to ensure a flawless working prototype."
+      }
     ],
     mvp: {
-      name: "Brief2Build AI Core Workflow",
-      description: "An image upload and analysis engine that ingests challenge screenshots, invokes Gemma 4 with grounding constraints, and renders an editable markdown roadmap and team task checklist.",
+      name: "EcoRoute AI Core Navigator",
+      description: "An intelligent challenge analysis and transit optimization prototype that extracts explicit constraints from visual briefs and builds an actionable execution roadmap.",
       features: [
         "In-memory drag-and-drop screenshot upload with client & server validation",
-        "Gemma 4 multimodal extraction separating ground truth from AI recommendations",
-        "Editable MVP proposal and reasoned tech stack cards",
+        "Gemma 4 multimodal extraction separating visual ground truth from AI recommendations",
         "Interactive team task checklist with real-time completion tracking",
+        "Live reference URL detection with explicit user approval workflow",
         "One-click GitHub-ready Markdown and JSON export"
       ]
     },
     technology_stack: [
       {
         technology: "React + Vite",
-        reason: "Instant hot-module reloading and minimal production bundle size for fast 30-second demos"
+        reason: "Ultra-fast hot module reloading and minimal production bundle size for responsive demos"
       },
       {
         technology: "Tailwind CSS",
-        reason: "Professional developer-tool aesthetic with high contrast and dark mode"
+        reason: "Professional developer-tool aesthetic with high contrast and accessible dark mode"
       },
       {
         technology: "Node.js & Express",
-        reason: "Lightweight, reliable backend that handles image streams and serves static Vite assets on Render"
+        reason: "Lightweight, reliable backend that handles image streams and serves static assets"
       },
       {
         technology: "Google GenAI SDK (@google/genai)",
-        reason: "Official supported SDK for calling Gemma 4 through the Gemini API with structured prompts"
+        reason: "Official supported SDK for calling Gemma 4 through the Gemini API"
       },
       {
         technology: "Multer (MemoryStorage)",
@@ -115,14 +163,14 @@ export const SAMPLE_DEMO_RESULT = {
       },
       {
         step: 4,
-        title: "Polish, Export & Local Production Testing",
-        description: "Add Markdown/JSON export, demo sample quick-loader, and test local single-port production build.",
-        estimated_minutes: 30
+        title: "URL Intelligence & Website Inspection",
+        description: "Implement safe URL retrieval with SSRF defense and cross-referenced discrepancy detection.",
+        estimated_minutes: 35
       },
       {
         step: 5,
-        title: "Render Deployment & Documentation",
-        description: "Create render.yaml, write complete README, add MIT license, and verify live URL.",
+        title: "Polish, Export & Local Production Testing",
+        description: "Add Markdown/JSON export, demo quick-loader, and test local single-port production build.",
         estimated_minutes: 30
       }
     ],
@@ -154,21 +202,21 @@ export const SAMPLE_DEMO_RESULT = {
       {
         id: "task-5",
         title: "Deploy to Render & test live health check",
-        description: "Bind to 0.0.0.0 and supply GEMINI_API_KEY privately in Render dashboard",
+        description: "Bind to 0.0.0.0 and supply GOOGLE_API_KEY privately in Render dashboard",
         status: "pending"
       }
     ],
     demo_flow: [
-      "0-15s: Hook — 'Brief2Build AI turns messy challenge screenshots into an editable build plan in 30 seconds.'",
-      "15-35s: Upload a real hackathon screenshot, add team context, and click 'Analyze with Gemma 4'.",
-      "35-65s: Show extracted requirements with visual citations, constraints, and uncertainties requiring verification.",
-      "65-95s: Show the editable MVP scope, justified tech stack, and check off completed tasks on the live board.",
-      "95-110s: Click 'Copy Markdown' to demonstrate instant GitHub-ready planning for team members.",
-      "110-120s: Highlight the clean Express + Vite architecture deployed live on Render."
+      "0-15s: Hook — 'Brief2Build AI turns complex challenge screenshots into an editable build plan in 30 seconds.'",
+      "15-35s: Upload a challenge screenshot or paste text, add team context, and click 'Analyze with Gemma 4'.",
+      "35-65s: Show extracted requirements with visual citations, constraints, and detected reference URLs.",
+      "65-95s: Demonstrate explicit approval for website inspection, showing separated findings and discrepancies.",
+      "95-110s: Edit the MVP scope live and check off tasks on the interactive checklist.",
+      "110-120s: Click 'Copy Markdown' to demonstrate instant GitHub-ready project planning."
     ],
     caveats: [
-      "Ensure GEMINI_API_KEY is configured in server .env or Render dashboard before running live calls",
-      "Confirm exact Gemma model name with hackathon mentors if custom endpoint is required"
+      "Ensure GOOGLE_API_KEY (or GEMINI_API_KEY) is configured in server .env or hosting environment variables",
+      "Model identifier defaults to gemma-4-26b-a4b-it or your configured GEMMA_MODEL_ID"
     ]
   }
 };

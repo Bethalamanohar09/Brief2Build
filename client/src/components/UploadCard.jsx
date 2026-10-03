@@ -27,9 +27,9 @@ export default function UploadCard({ onAnalyze, isAnalyzing, serverStatus, onTry
   const handleLoadSampleChallenge = async () => {
     try {
       setErrorMsg(null);
-      const res = await fetch('/sample-challenge.svg');
+      const res = await fetch('/sample-challenge.png');
       const blob = await res.blob();
-      const sampleFile = new File([blob], 'hacktoberfest-gemma-challenge.svg', { type: 'image/svg+xml' });
+      const sampleFile = new File([blob], 'hacktoberfest-gemma-challenge.png', { type: 'image/png' });
       
       setSelectedFile(sampleFile);
       setPreviewUrl('/sample-challenge.svg');

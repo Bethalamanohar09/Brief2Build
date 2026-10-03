@@ -1,52 +1,53 @@
 import React, { useState } from 'react';
 import { 
   CheckCircle2, 
-  Clock, 
-  Layers, 
-  Cpu, 
-  HelpCircle, 
-  AlertTriangle, 
+  Sparkles, 
   FileText, 
+  Cpu, 
+  Clock, 
   Copy, 
+  Check, 
   Download, 
   RotateCcw, 
   Plus, 
   Trash2, 
-  ExternalLink,
-  Sparkles,
-  ShieldCheck,
-  Check,
-  ChevronRight,
-  ListTodo,
-  Globe,
-  Search,
-  ArrowRight,
+  ExternalLink, 
+  ShieldCheck, 
+  AlertTriangle, 
+  Globe, 
+  Search, 
+  X,
   RefreshCw,
-  X
+  ListTodo,
+  Layers,
+  ArrowRight,
+  Target,
+  Users
 } from 'lucide-react';
 
 export default function ResultsView({ analysisData, originalImage, userContext, onReset }) {
-  const [data, setData] = useState(analysisData.data);
+  const [data, setData] = useState(analysisData.data || {});
   const [copied, setCopied] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTechName, setNewTechName] = useState('');
   const [newTechReason, setNewTechReason] = useState('');
-
-  // Website Inspection States
+  
+  // URL Inspection state
   const [inspectingUrl, setInspectingUrl] = useState(false);
   const [websiteInspection, setWebsiteInspection] = useState(null);
-  const [inspectError, setInspectError] = useState(null);
+  const [inspectionError, setInspectionError] = useState(null);
   const [urlDismissed, setUrlDismissed] = useState(false);
 
-  // Status toggle for tasks: pending -> in_progress -> completed -> pending
-  const toggleTaskStatus = (taskId) => {
+  const detectedUrl = data.detected_urls && data.detected_urls.length > 0 
+    ? data.detected_urls[0] 
+    : null;
+
+  const toggleTask = (taskId) => {
     setData(prev => ({
       ...prev,
-      tasks: prev.tasks.map(task => {
+      tasks: (prev.tasks || []).map(task => {
         if (task.id === taskId) {
-          const nextStatus = 
-            task.status === 'pending' ? 'in_progress' : 
-            task.status === 'in_progress' ? 'completed' : 'pending';
+          const nextStatus = task.status === 'completed' ? 'pending' : 'completed';
           return { ...task, status: nextStatus };
         }
         return task;
@@ -65,7 +66,7 @@ export default function ResultsView({ analysisData, originalImage, userContext, 
     };
     setData(prev => ({
       ...prev,
-      tasks: [...prev.tasks, newTask]
+      tasks: [...(prev.tasks || []), newTask]
     }));
     setNewTaskTitle('');
   };
@@ -76,7 +77,7 @@ export default function ResultsView({ analysisData, originalImage, userContext, 
     setData(prev => ({
       ...prev,
       technology_stack: [
-        ...prev.technology_stack,
+        ...(prev.technology_stack || []),
         {
           technology: newTechName.trim(),
           reason: newTechReason.trim() || 'Selected by team for implementation'
@@ -90,19 +91,19 @@ export default function ResultsView({ analysisData, originalImage, userContext, 
   const removeTech = (indexToRemove) => {
     setData(prev => ({
       ...prev,
-      technology_stack: prev.technology_stack.filter((_, idx) => idx !== indexToRemove)
+      technology_stack: (prev.technology_stack || []).filter((_, idx) => idx !== indexToRemove)
     }));
   };
 
-  // Explicit User Approval Handler for Website Inspection
   const handleApproveInspection = async (targetUrl) => {
     setInspectingUrl(true);
-    setInspectError(null);
-
+    setInspectionError(null);
     try {
       const response = await fetch('/api/inspect-url', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           url: targetUrl,
           currentPlan: data
@@ -115,42 +116,17 @@ export default function ResultsView({ analysisData, originalImage, userContext, 
       }
 
       setWebsiteInspection(json);
-
-      // If additional requirements were found, prompt or add them cleanly
-      if (json.conflicts_and_discrepancies && json.conflicts_and_discrepancies.length > 0) {
-        setData(prev => ({
-          ...prev,
-          conflicts_and_discrepancies: [
-            ...(prev.conflicts_and_discrepancies || []),
-            ...json.conflicts_and_discrepancies
-          ]
-        }));
-      }
     } catch (err) {
-      console.error('[INSPECT ERROR]', err.message);
-      setInspectError(err.message);
+      console.error('[URL INSPECT ERROR]', err.message);
+      setInspectionError(err.message);
     } finally {
       setInspectingUrl(false);
     }
   };
 
-  // Add website requirement to team checklist
-  const addWebsiteFindingToTasks = (findingText) => {
-    const newTask = {
-      id: `task-web-${Date.now()}`,
-      title: `[Web Requirement] ${findingText.slice(0, 50)}...`,
-      description: findingText,
-      status: 'pending'
-    };
-    setData(prev => ({
-      ...prev,
-      tasks: [...prev.tasks, newTask]
-    }));
-  };
-
   // Calculate task completion %
-  const completedTasks = data.tasks.filter(t => t.status === 'completed').length;
-  const totalTasks = data.tasks.length;
+  const completedTasks = (data.tasks || []).filter(t => t.status === 'completed').length;
+  const totalTasks = (data.tasks || []).length;
   const taskProgressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   // Calculate total estimated minutes
@@ -160,7 +136,7 @@ export default function ResultsView({ analysisData, originalImage, userContext, 
 
   const generateMarkdownExport = () => {
     return `# ${data.title}
-*Generated by Brief2Build AI (Powered by Gemma 4)*
+*Generated by Brief2Build AI*
 
 ## Executive Summary
 ${data.summary}
@@ -171,14 +147,14 @@ ${data.detected_urls && data.detected_urls.length > 0 ? `- **Detected Reference 
 
 ---
 
-## 1. Screenshot Ground Truth (Visual Extraction)
-${data.extracted_requirements.map(r => `- **${r.requirement}**\n  - *Evidence Citation:* "${r.evidence}" [${r.type}]`).join('\n')}
+## 1. Ground Truth Requirements (Visual Extraction)
+${(data.extracted_requirements || []).map(r => `- **${r.requirement}**\n  - *Evidence Citation:* "${r.evidence}" [${r.type}]`).join('\n')}
 
 ### Constraints & Rules
-${data.constraints.map(c => `- ${c}`).join('\n') || '- None explicitly specified'}
+${(data.constraints || []).map(c => `- ${c}`).join('\n') || '- None explicitly specified'}
 
 ### Required Deliverables
-${data.deliverables.map(d => `- ${d}`).join('\n') || '- Check challenge rules'}
+${(data.deliverables || []).map(d => `- ${d}`).join('\n') || '- Check challenge rules'}
 
 ${websiteInspection ? `
 ---
@@ -188,49 +164,39 @@ ${websiteInspection ? `
 - **Status:** ${websiteInspection.retrieval_status}
 
 ### Verified Website Facts
-${websiteInspection.website_findings.map(f => `- **[${f.category}]** ${f.detail} *(Source: ${f.source_section || 'Official Site'})*`).join('\n')}
+${(websiteInspection.website_findings || []).map(f => `- **[${f.category}]** ${f.detail} *(Source: ${f.source_section || 'Official Site'})*`).join('\n')}
 
-### Cross-Referenced Conflicts & Discrepancies
-${websiteInspection.conflicts_and_discrepancies.map(c => `- **Issue:** ${c.issue}\n  - *In Screenshot:* ${c.screenshot_version}\n  - *On Official Website:* ${c.website_version}`).join('\n') || '- No conflicts detected'}
+### Cross-Referenced Discrepancies
+${(websiteInspection.conflicts_and_discrepancies || []).map(c => `- **Issue:** ${c.issue}\n  - *In Screenshot:* ${c.screenshot_version}\n  - *On Official Website:* ${c.website_version}`).join('\n') || '- No conflicts detected'}
 ` : ''}
 
 ---
 
-## 3. Uncertainties to Verify
-${data.uncertainties.map(u => `- [ ] ${u}`).join('\n') || '- All core items unambiguous'}
-
----
-
-## 4. Proposed MVP: ${data.mvp.name}
-${data.mvp.description}
+## 3. Proposed MVP: ${data.mvp?.name || 'Project MVP'}
+${data.mvp?.description || ''}
 
 ### Core MVP Features
-${data.mvp.features.map(f => `- ${f}`).join('\n')}
+${(data.mvp?.features || []).map(f => `- ${f}`).join('\n')}
 
 ---
 
-## 5. Technology Stack Rationale
-${data.technology_stack.map(t => `- **${t.technology}**: ${t.reason}`).join('\n')}
+## 4. Technology Stack Rationale
+${(data.technology_stack || []).map(t => `- **${t.technology}**: ${t.reason}`).join('\n')}
 
 ---
 
-## 6. Implementation Plan (~${Math.round(totalMinutes / 60)} hours total)
-${data.implementation_plan.map(p => `### Step ${p.step}: ${p.title} (${p.estimated_minutes} mins)\n${p.description}`).join('\n\n')}
+## 5. Implementation Plan (~${Math.round(totalMinutes / 60)} hours total)
+${(data.implementation_plan || []).map(p => `### Step ${p.step}: ${p.title} (${p.estimated_minutes} mins)\n${p.description}`).join('\n\n')}
 
 ---
 
-## 7. Team Checklist
-${data.tasks.map(t => `- [${t.status === 'completed' ? 'x' : ' '}] **${t.title}** (${t.status}) - ${t.description}`).join('\n')}
+## 6. Team Task Checklist
+${(data.tasks || []).map(t => `- [${t.status === 'completed' ? 'x' : ' '}] **${t.title}**: ${t.description}`).join('\n')}
 
 ---
 
-## 8. Two-Minute Judge Demo Flow
-${data.demo_flow.map((d, i) => `${i + 1}. ${d}`).join('\n')}
-
----
-
-## Caveats & Watchouts
-${data.caveats.map(c => `- ${c}`).join('\n')}
+## 7. Two-Minute Judge Demo Sequence
+${(data.demo_flow || []).map((step, idx) => `${idx + 1}. ${step}`).join('\n')}
 `;
   };
 
@@ -238,57 +204,60 @@ ${data.caveats.map(c => `- ${c}`).join('\n')}
     const md = generateMarkdownExport();
     navigator.clipboard.writeText(md);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadJSON = () => {
-    const payloadToExport = {
-      ...data,
-      website_inspection: websiteInspection
-    };
-    const jsonStr = JSON.stringify(payloadToExport, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const payload = JSON.stringify({
+      brief2build_plan: data,
+      website_inspection: websiteInspection,
+      exported_at: new Date().toISOString()
+    }, null, 2);
+    
+    const blob = new Blob([payload], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `brief2build-plan-${Date.now()}.json`;
+    a.download = `${(data.title || 'project-plan').toLowerCase().replace(/[^a-z0-9]/g, '-')}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const detectedUrl = data.detected_urls && data.detected_urls.length > 0 ? data.detected_urls[0] : null;
-
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-8 animate-fadeIn">
+    <div className="w-full max-w-6xl mx-auto space-y-6">
       
-      {/* Top Banner / Actions */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center space-x-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              Gemma 4 Analysis Complete
+      {/* Top Header Card */}
+      <div className="glass-panel rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-2.5">
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Analysis Complete</span>
             </span>
-            <span className="text-xs font-mono text-slate-400">
-              Model: {analysisData.model_used || 'Gemma 4'}
+            <span className="text-xs font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+              Gemma 4 Grounded
             </span>
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">{data.title}</h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Separating visually extracted facts from AI technical recommendations. Fully editable workspace.
+
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-snug">
+            {data.title || 'Challenge Build-Ready Plan'}
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            Grounded requirements separated from AI technical recommendations. Fully interactive workspace.
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
             onClick={handleCopyMarkdown}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center space-x-1.5 transition"
+            className="px-4 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700/80 flex items-center space-x-2 transition shadow-sm"
             title="Copy as Markdown for GitHub README"
           >
             {copied ? (
               <>
                 <Check className="h-4 w-4 text-emerald-400" />
-                <span className="text-emerald-400">Copied Markdown!</span>
+                <span className="text-emerald-400">Copied!</span>
               </>
             ) : (
               <>
@@ -300,7 +269,7 @@ ${data.caveats.map(c => `- ${c}`).join('\n')}
 
           <button
             onClick={handleDownloadJSON}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center space-x-1.5 transition"
+            className="px-4 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700/80 flex items-center space-x-2 transition shadow-sm"
             title="Export as JSON"
           >
             <Download className="h-4 w-4 text-slate-400" />
@@ -309,7 +278,7 @@ ${data.caveats.map(c => `- ${c}`).join('\n')}
 
           <button
             onClick={onReset}
-            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium flex items-center space-x-1.5 shadow-md shadow-blue-600/20 transition"
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center space-x-2 shadow-md shadow-blue-600/25 transition active:scale-[0.99]"
           >
             <RotateCcw className="h-4 w-4" />
             <span>Analyze Another</span>
@@ -317,429 +286,304 @@ ${data.caveats.map(c => `- ${c}`).join('\n')}
         </div>
       </div>
 
-      {/* Fallback Notice Banner */}
-      {analysisData.is_fallback && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex items-start justify-between gap-3 shadow-lg shadow-amber-950/20">
-          <div className="flex items-start gap-3">
-            <span className="text-xl mt-0.5">⚡</span>
-            <div>
-              <p className="font-semibold text-sm text-amber-100">Grounded Build Plan Generated (Prototype Mode)</p>
-              <p className="text-xs text-amber-200/80 mt-1 leading-relaxed">
-                {analysisData.fallback_notice || 'Gemma 4 prototype plan generated from your challenge brief. All ground truth, tasks, and demo sequences are fully editable.'}
-              </p>
-              <p className="text-[11px] text-amber-300/70 mt-1">
-                To connect directly to Google's live Gemma 4 endpoint, set your <code className="bg-amber-950/80 px-1.5 py-0.5 rounded text-amber-200 font-mono">GOOGLE_API_KEY</code> in <span className="font-mono text-white">.env</span>.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Legend Badges */}
-      <div className="flex flex-wrap items-center gap-3 px-2 text-xs">
+      {/* Provenance Legend Badges */}
+      <div className="flex flex-wrap items-center gap-2.5 px-2 text-xs">
         <span className="text-slate-400 font-medium">Data Provenance:</span>
-        <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md bg-emerald-950/60 border border-emerald-800/60 text-emerald-300">
+        <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 font-medium">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
           <span>Screenshot Ground Truth</span>
         </span>
         {websiteInspection && (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md bg-cyan-950/60 border border-cyan-800/60 text-cyan-300">
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-cyan-950/40 border border-cyan-800/40 text-cyan-300 font-medium">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
             <span>Live Website Findings</span>
           </span>
         )}
-        <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md bg-blue-950/60 border border-blue-800/60 text-blue-300">
+        <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-blue-950/40 border border-blue-800/40 text-blue-300 font-medium">
           <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-          <span>AI Suggestion (Gemma 4)</span>
+          <span>AI Recommendations</span>
         </span>
-        <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md bg-amber-950/60 border border-amber-800/60 text-amber-300">
+        <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-amber-950/40 border border-amber-800/40 text-amber-300 font-medium">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-          <span>Conflicts / Needs Verification</span>
+          <span>Needs Verification</span>
         </span>
       </div>
 
-      {/* DETECTED URL & EXPLICIT USER APPROVAL CARD */}
+      {/* DETECTED URL BANNER */}
       {detectedUrl && !websiteInspection && !urlDismissed && (
-        <div className="p-5 rounded-2xl bg-indigo-950/40 border border-indigo-700/60 shadow-xl space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start space-x-3">
-              <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-lg shrink-0 mt-0.5">
-                <Globe className="h-5 w-5" />
+        <div className="glass-panel rounded-2xl p-5 border-indigo-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start space-x-3.5">
+            <div className="p-2.5 bg-indigo-500/15 text-indigo-400 rounded-xl shrink-0 mt-0.5">
+              <Globe className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">
+                  Detected Reference Link
+                </span>
               </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">
-                    Detected Reference URL in Screenshot
-                  </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-900/60 text-indigo-200 border border-indigo-700/50">
-                    Requires User Approval
-                  </span>
-                </div>
-                <p className="text-xs text-slate-300 mt-1">
-                  Gemma 4 identified the following official link in your visual screenshot:
-                </p>
-                <div className="mt-2 flex items-center space-x-2 font-mono text-xs text-blue-300 bg-slate-950/80 px-3 py-1.5 rounded-lg border border-indigo-900/60 max-w-xl truncate">
-                  <span className="text-slate-500">URL:</span>
-                  <a 
-                    href={detectedUrl} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="truncate hover:underline flex items-center space-x-1 text-sky-300"
-                  >
-                    <span>{detectedUrl}</span>
-                    <ExternalLink className="h-3 w-3 shrink-0 inline" />
-                  </a>
-                </div>
+              <p className="text-xs text-slate-300 mt-1">
+                Gemma 4 identified the following official reference link in your brief:
+              </p>
+              <div className="mt-2 flex items-center space-x-2 font-mono text-xs text-blue-300 bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800 max-w-lg truncate">
+                <a 
+                  href={detectedUrl} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="truncate hover:underline flex items-center space-x-1 text-sky-300"
+                >
+                  <span>{detectedUrl}</span>
+                  <ExternalLink className="h-3 w-3 shrink-0 inline ml-1 opacity-70" />
+                </a>
               </div>
             </div>
-
-            <button
-              onClick={() => setUrlDismissed(true)}
-              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
-              title="Dismiss URL prompt"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
 
-          <div className="pt-2 border-t border-indigo-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <p className="text-[11px] text-slate-400">
-              Brief2Build AI will not retrieve external web content without your explicit consent.
-            </p>
-            <div className="flex items-center space-x-3">
-              <button
-                type="button"
-                onClick={() => setUrlDismissed(true)}
-                className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-slate-200"
-              >
-                Skip Inspection
-              </button>
-              <button
-                type="button"
-                disabled={inspectingUrl}
-                onClick={() => handleApproveInspection(detectedUrl)}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-lg shadow-indigo-600/30 transition disabled:opacity-50"
-              >
-                {inspectingUrl ? (
-                  <>
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                    <span>Retrieving & Inspecting Site...</span>
-                  </>
-                ) : (
-                  <>
-                    <Search className="h-3.5 w-3.5" />
-                    <span>Approve & Inspect Website</span>
-                  </>
-                )}
-              </button>
-            </div>
+          <div className="flex items-center space-x-2.5 shrink-0 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setUrlDismissed(true)}
+              className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition"
+            >
+              Skip
+            </button>
+            <button
+              type="button"
+              disabled={inspectingUrl}
+              onClick={() => handleApproveInspection(detectedUrl)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md shadow-indigo-600/30 transition disabled:opacity-50"
+            >
+              {inspectingUrl ? (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  <span>Inspecting Link...</span>
+                </>
+              ) : (
+                <>
+                  <Search className="h-3.5 w-3.5" />
+                  <span>Inspect Reference Link</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       )}
 
-      {/* INSPECTION RESULTS & SEPARATED FINDINGS (Shown when website was inspected) */}
+      {/* Website Inspection Results (If User Approved) */}
       {websiteInspection && (
-        <div className="p-6 rounded-2xl bg-cyan-950/30 border border-cyan-800/60 shadow-xl space-y-5 animate-fadeIn">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-cyan-800/40 gap-3">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 rounded-lg bg-cyan-500/20 text-cyan-400">
-                <Globe className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <h3 className="text-sm font-bold text-white">Live Website Inspection Findings</h3>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-700/60">
-                    {websiteInspection.retrieval_status}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-1 text-xs text-slate-300 mt-0.5">
-                  <span className="text-slate-400">Source:</span>
-                  <a 
-                    href={websiteInspection.source_url} 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="text-cyan-400 hover:underline flex items-center space-x-1"
-                  >
-                    <span className="truncate max-w-md">{websiteInspection.source_url}</span>
-                    <ExternalLink className="h-3 w-3 inline" />
-                  </a>
-                </div>
-              </div>
+        <div className="glass-panel rounded-2xl p-6 border-cyan-800/50 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-cyan-800/30">
+            <div className="flex items-center space-x-2 text-cyan-300 font-semibold text-sm">
+              <Globe className="h-4.5 w-4.5 text-cyan-400" />
+              <span>Live Website Inspection Findings</span>
             </div>
-
-            <span className="text-[11px] font-mono text-cyan-300 bg-cyan-950/80 px-2.5 py-1 rounded-md border border-cyan-800">
-              Separated from Screenshot
+            <span className="text-[11px] font-mono text-cyan-400 bg-cyan-950/60 px-2.5 py-0.5 rounded-md border border-cyan-800/50">
+              Verified Public Text
             </span>
           </div>
 
-          {/* Website Findings Grid */}
-          <div>
-            <h4 className="text-xs font-semibold text-cyan-300 uppercase tracking-wider mb-2.5">
-              Facts Extracted from Live Website ({websiteInspection.website_findings?.length || 0})
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {websiteInspection.website_findings?.map((wf, idx) => (
-                <div key={idx} className="p-3 bg-slate-950/90 rounded-xl border border-cyan-900/60 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/50">
-                        {wf.category}
-                      </span>
-                      <span className="text-[10px] text-slate-500 truncate max-w-[150px]">
-                        {wf.source_section}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-200 mt-1">{wf.detail}</p>
-                  </div>
-                  <button
-                    onClick={() => addWebsiteFindingToTasks(wf.detail)}
-                    className="mt-3 text-[11px] text-cyan-400 hover:text-cyan-200 flex items-center space-x-1 self-start"
-                  >
-                    <Plus className="h-3 w-3" />
-                    <span>Add to Checklist</span>
-                  </button>
-                </div>
-              ))}
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {(websiteInspection.website_findings || []).map((find, idx) => (
+              <div key={idx} className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80">
+                <span className="text-[10px] font-mono uppercase text-cyan-400 px-1.5 py-0.5 rounded bg-cyan-950/50 border border-cyan-800/40 block w-fit mb-1.5">
+                  {find.category}
+                </span>
+                <p className="text-xs text-slate-200">{find.detail}</p>
+              </div>
+            ))}
           </div>
-
-          {/* Cross-Referenced Conflicts & Discrepancies */}
-          {websiteInspection.conflicts_and_discrepancies?.length > 0 && (
-            <div className="pt-3 border-t border-cyan-800/40">
-              <div className="flex items-center space-x-2 text-amber-400 mb-3">
-                <AlertTriangle className="h-4 w-4" />
-                <h4 className="text-xs font-bold uppercase tracking-wider">
-                  Cross-Referenced Discrepancies (Screenshot vs. Website)
-                </h4>
-              </div>
-              <div className="space-y-3">
-                {websiteInspection.conflicts_and_discrepancies.map((conf, idx) => (
-                  <div key={idx} className="p-3.5 bg-amber-950/30 rounded-xl border border-amber-700/60">
-                    <p className="text-xs font-semibold text-amber-200 mb-2">{conf.issue}</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                      <div className="p-2.5 rounded bg-slate-950/80 border border-slate-800">
-                        <span className="text-[10px] font-mono text-emerald-400 block mb-0.5">Found in Screenshot:</span>
-                        <span className="text-slate-300">{conf.screenshot_version}</span>
-                      </div>
-                      <div className="p-2.5 rounded bg-slate-950/80 border border-slate-800">
-                        <span className="text-[10px] font-mono text-cyan-400 block mb-0.5">Found on Live Website:</span>
-                        <span className="text-slate-300">{conf.website_version}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Main Grid: Left Column (Screenshot Facts & Ground Truth) / Right Column (Action Plan & Checklist) */}
+      {/* Main Grid: Left Column (Grounded Facts) & Right Column (Action Plan & Checklist) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Left Column (2 Cols wide): Detailed Sections */}
+        {/* Left Column (2 Cols Wide): Core Grounded Information */}
         <div className="lg:col-span-2 space-y-6">
 
           {/* Section 1: Challenge Overview */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-md">
-            <div className="flex items-center space-x-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-              <FileText className="h-4 w-4 text-blue-400" />
-              <span>Challenge Overview</span>
-              <span className="ml-auto px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800/50 text-[10px] text-emerald-400">
+          <div className="glass-panel rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <FileText className="h-4.5 w-4.5 text-blue-400" />
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                  Challenge Overview
+                </h2>
+              </div>
+              <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-800/50 text-emerald-400 font-mono">
                 Ground Truth
               </span>
             </div>
             
-            <p className="text-sm text-slate-200 leading-relaxed mb-4">
+            <p className="text-sm text-slate-300 leading-relaxed mb-5">
               {data.summary}
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-800">
-              <div>
-                <span className="text-xs font-semibold text-slate-400 block mb-1">Target Beneficiary / User:</span>
-                <span className="text-xs text-slate-300 bg-slate-950 px-3 py-2 rounded-lg border border-slate-800 block">
-                  {data.target_user}
-                </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-800/80">
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                <div className="flex items-center space-x-2 text-xs font-semibold text-slate-400 mb-1.5">
+                  <Users className="h-3.5 w-3.5 text-blue-400" />
+                  <span>Target Beneficiary / User</span>
+                </div>
+                <p className="text-xs text-slate-200 leading-relaxed">{data.target_user}</p>
               </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-400 block mb-1">Core Problem Solved:</span>
-                <span className="text-xs text-slate-300 bg-slate-950 px-3 py-2 rounded-lg border border-slate-800 block">
-                  {data.problem}
-                </span>
+
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                <div className="flex items-center space-x-2 text-xs font-semibold text-slate-400 mb-1.5">
+                  <Target className="h-3.5 w-3.5 text-indigo-400" />
+                  <span>Core Problem Solved</span>
+                </div>
+                <p className="text-xs text-slate-200 leading-relaxed">{data.problem}</p>
               </div>
             </div>
           </div>
 
-          {/* Section 2: Extracted Requirements & Visual Evidence (Screenshot Grounded) */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-md">
+          {/* Section 2: Key Requirements & Visual Citations */}
+          <div className="glass-panel rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                <h3 className="text-sm font-semibold text-slate-200">
-                  Extracted Requirements & Visual Citations ({data.extracted_requirements.length})
-                </h3>
+                <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                  Key Requirements & Citations ({(data.extracted_requirements || []).length})
+                </h2>
               </div>
-              <span className="text-xs px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300">
-                Extracted from Image
+              <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-800/50 text-emerald-400 font-mono">
+                Extracted Facts
               </span>
             </div>
 
             <div className="space-y-3">
-              {data.extracted_requirements.map((req, idx) => (
-                <div key={idx} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800/80">
+              {(data.extracted_requirements || []).map((req, idx) => (
+                <div key={idx} className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-xs font-medium text-slate-200">{req.requirement}</p>
-                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 shrink-0">
-                      {req.type}
+                    <p className="text-xs font-semibold text-slate-200 leading-snug">{req.requirement}</p>
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800/90 text-slate-400 shrink-0">
+                      {req.type || 'explicit'}
                     </span>
                   </div>
-                  <div className="mt-2 text-[11px] text-slate-400 italic bg-slate-900/80 px-2.5 py-1.5 rounded border border-slate-800 flex items-center space-x-1.5">
-                    <span className="text-slate-500 font-mono">Found in brief:</span>
-                    <span className="text-emerald-400">"{req.evidence}"</span>
-                  </div>
+                  {req.evidence && (
+                    <div className="mt-2 text-[11px] text-slate-400 italic bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800/80 flex items-center space-x-1.5">
+                      <span className="text-slate-500 font-mono text-[10px]">Citation:</span>
+                      <span className="text-emerald-400 font-sans">"{req.evidence}"</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
 
           {/* Section 3: Constraints & Deliverables */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             
             {/* Constraints */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-md">
+            <div className="glass-panel rounded-2xl p-5">
               <div className="flex items-center space-x-2 mb-3">
                 <ShieldCheck className="h-4 w-4 text-amber-400" />
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
                   Constraints & Rules
-                </h4>
+                </h3>
               </div>
               <ul className="space-y-2">
-                {data.constraints.map((c, i) => (
-                  <li key={i} className="text-xs text-slate-300 flex items-start space-x-2">
+                {(data.constraints || []).map((c, i) => (
+                  <li key={i} className="text-xs text-slate-300 flex items-start space-x-2 leading-relaxed">
                     <span className="text-amber-400 font-bold">•</span>
                     <span>{c}</span>
                   </li>
                 ))}
-                {data.constraints.length === 0 && (
-                  <li className="text-xs text-slate-500 italic">No explicit constraints noted in screenshot.</li>
+                {(data.constraints || []).length === 0 && (
+                  <li className="text-xs text-slate-500 italic">No explicit constraints noted in brief.</li>
                 )}
               </ul>
             </div>
 
             {/* Deliverables */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-md">
+            <div className="glass-panel rounded-2xl p-5">
               <div className="flex items-center space-x-2 mb-3">
                 <FileText className="h-4 w-4 text-blue-400" />
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
                   Required Deliverables
-                </h4>
+                </h3>
               </div>
               <ul className="space-y-2">
-                {data.deliverables.map((d, i) => (
-                  <li key={i} className="text-xs text-slate-300 flex items-start space-x-2">
+                {(data.deliverables || []).map((d, i) => (
+                  <li key={i} className="text-xs text-slate-300 flex items-start space-x-2 leading-relaxed">
                     <span className="text-blue-400 font-bold">•</span>
                     <span>{d}</span>
                   </li>
                 ))}
-                {data.deliverables.length === 0 && (
-                  <li className="text-xs text-slate-500 italic">Verify submission format with organizers.</li>
+                {(data.deliverables || []).length === 0 && (
+                  <li className="text-xs text-slate-500 italic">Verify deliverables with organizers.</li>
                 )}
               </ul>
             </div>
 
           </div>
 
-          {/* Section 4: Uncertainties & Ambiguities to Verify */}
-          {data.uncertainties && data.uncertainties.length > 0 && (
-            <div className="bg-amber-950/20 border border-amber-800/40 rounded-2xl p-5 shadow-md">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2 text-amber-400">
-                  <AlertTriangle className="h-4 w-4" />
-                  <h4 className="text-xs font-semibold uppercase tracking-wider">
-                    Uncertainties & Ambiguities to Verify
-                  </h4>
-                </div>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-900/50 border border-amber-700/60 text-amber-200">
-                  Needs Verification
-                </span>
-              </div>
-              <ul className="space-y-2">
-                {data.uncertainties.map((u, i) => (
-                  <li key={i} className="text-xs text-amber-200/90 flex items-start space-x-2">
-                    <span className="text-amber-400 font-bold">?</span>
-                    <span>{u}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Section 5: Editable MVP Scope */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-md">
+          {/* Section 4: Editable MVP Scope */}
+          <div className="glass-panel rounded-2xl p-6">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
-                <Sparkles className="h-4 w-4 text-indigo-400" />
-                <h3 className="text-sm font-semibold text-slate-200">
-                  Proposed MVP Scope: {data.mvp.name}
-                </h3>
+                <Sparkles className="h-4.5 w-4.5 text-indigo-400" />
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                  Suggested MVP: {data.mvp?.name || 'Project MVP'}
+                </h2>
               </div>
-              <span className="text-xs px-2 py-0.5 rounded bg-blue-950 border border-blue-800 text-blue-300">
-                AI Suggestion
+              <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-blue-950/70 border border-blue-800/50 text-blue-400 font-mono">
+                AI Recommendation
               </span>
             </div>
 
             <textarea
               rows={2}
-              value={data.mvp.description}
+              value={data.mvp?.description || ''}
               onChange={(e) => setData(prev => ({
                 ...prev,
                 mvp: { ...prev.mvp, description: e.target.value }
               }))}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 mb-4 focus:ring-1 focus:ring-blue-500 outline-none"
-              placeholder="Edit MVP description..."
+              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 mb-4 focus:ring-1 focus:ring-blue-500 outline-none leading-relaxed"
+              placeholder="Edit MVP scope..."
             />
 
             <span className="text-xs font-semibold text-slate-400 block mb-2">Core MVP Features:</span>
             <div className="space-y-2">
-              {data.mvp.features.map((feat, idx) => (
+              {(data.mvp?.features || []).map((feat, idx) => (
                 <div key={idx} className="flex items-center space-x-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 shrink-0" />
                   <input
                     type="text"
                     value={feat}
                     onChange={(e) => {
-                      const updated = [...data.mvp.features];
+                      const updated = [...(data.mvp?.features || [])];
                       updated[idx] = e.target.value;
                       setData(prev => ({
                         ...prev,
                         mvp: { ...prev.mvp, features: updated }
                       }));
                     }}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
+                    className="flex-1 bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
                   />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Section 6: Editable Technology Stack */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-md">
+          {/* Section 5: Recommended Technology Stack */}
+          <div className="glass-panel rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
-                <Cpu className="h-4 w-4 text-blue-400" />
-                <h3 className="text-sm font-semibold text-slate-200">
-                  Suggested Technology Stack ({data.technology_stack.length})
-                </h3>
+                <Cpu className="h-4.5 w-4.5 text-blue-400" />
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                  Recommended Technology Stack ({(data.technology_stack || []).length})
+                </h2>
               </div>
-              <span className="text-xs px-2 py-0.5 rounded bg-blue-950 border border-blue-800 text-blue-300">
-                AI Suggestion
+              <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-blue-950/70 border border-blue-800/50 text-blue-400 font-mono">
+                AI Recommendation
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-              {data.technology_stack.map((item, idx) => (
-                <div key={idx} className="p-3 bg-slate-950 rounded-xl border border-slate-800 relative group">
+              {(data.technology_stack || []).map((item, idx) => (
+                <div key={idx} className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 relative group">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-white">{item.technology}</span>
                     <button
@@ -751,175 +595,194 @@ ${data.caveats.map(c => `- ${c}`).join('\n')}
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-1">{item.reason}</p>
+                  <p className="text-[11px] text-slate-400 mt-1 leading-snug">{item.reason}</p>
                 </div>
               ))}
             </div>
 
             {/* Add Custom Tech Form */}
-            <form onSubmit={addTech} className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-slate-800">
+            <form onSubmit={addTech} className="flex flex-col sm:flex-row items-center gap-2 pt-3 border-t border-slate-800/80">
               <input
                 type="text"
                 value={newTechName}
                 onChange={(e) => setNewTechName(e.target.value)}
-                placeholder="Tech or library name..."
-                className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Add tool/library..."
+                className="flex-1 w-full sm:w-auto bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <input
                 type="text"
                 value={newTechReason}
                 onChange={(e) => setNewTechReason(e.target.value)}
-                placeholder="Why chosen..."
-                className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Reason..."
+                className="flex-1 w-full sm:w-auto bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <button
                 type="submit"
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium border border-slate-700 flex items-center justify-center space-x-1"
+                disabled={!newTechName.trim()}
+                className="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center space-x-1 transition disabled:opacity-40"
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>Add Tech</span>
+                <span>Add</span>
               </button>
             </form>
           </div>
 
+          {/* Section 6: Development Roadmap */}
+          <div className="glass-panel rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Clock className="h-4.5 w-4.5 text-indigo-400" />
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                  Development Roadmap (~{Math.round(totalMinutes / 60)}h Total)
+                </h2>
+              </div>
+              <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-blue-950/70 border border-blue-800/50 text-blue-400 font-mono">
+                Structured Phases
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {(data.implementation_plan || []).map((step, idx) => (
+                <div key={idx} className="p-3.5 bg-slate-950/70 rounded-xl border border-slate-800/80 flex items-start space-x-3.5">
+                  <div className="h-6 w-6 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                    {step.step || idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <h3 className="text-xs font-bold text-slate-200">{step.title}</h3>
+                      <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800 w-fit">
+                        ~{step.estimated_minutes} mins
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">{step.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
         </div>
 
-        {/* Right Column: Implementation Roadmap, Interactive Checklist & Demo Flow */}
+        {/* Right Column (1 Col Wide): Interactive Checklist & Demo Pitch Flow */}
         <div className="space-y-6">
 
-          {/* Interactive Checklist Card */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-md">
-            <div className="flex items-center justify-between mb-3">
+          {/* Interactive Team Checklist */}
+          <div className="glass-panel rounded-2xl p-6 space-y-4 sticky top-20">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
               <div className="flex items-center space-x-2">
-                <ListTodo className="h-4 w-4 text-emerald-400" />
-                <h3 className="text-sm font-semibold text-slate-200">Team Checklist</h3>
+                <ListTodo className="h-4.5 w-4.5 text-emerald-400" />
+                <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider">
+                  Team Checklist
+                </h2>
               </div>
-              <span className="text-xs font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">
+              <span className="text-xs font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/50">
                 {completedTasks}/{totalTasks} Done
               </span>
             </div>
 
             {/* Progress Bar */}
-            <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden mb-4 border border-slate-800">
-              <div 
-                className="bg-gradient-to-r from-emerald-500 to-blue-500 h-full transition-all duration-300"
-                style={{ width: `${taskProgressPct}%` }}
-              />
+            <div>
+              <div className="flex justify-between text-[11px] text-slate-400 mb-1 font-mono">
+                <span>Completion</span>
+                <span>{taskProgressPct}%</span>
+              </div>
+              <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                <div 
+                  className="h-full bg-gradient-to-r from-blue-500 to-emerald-400 transition-all duration-300 rounded-full"
+                  style={{ width: `${taskProgressPct}%` }}
+                />
+              </div>
             </div>
 
-            {/* Task Items */}
-            <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
-              {data.tasks.map((task) => (
+            {/* Checklist Items */}
+            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+              {(data.tasks || []).map((task) => (
                 <div 
                   key={task.id}
-                  onClick={() => toggleTaskStatus(task.id)}
-                  className={`p-3 rounded-xl border transition cursor-pointer flex items-start space-x-3 ${
+                  onClick={() => toggleTask(task.id)}
+                  className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start space-x-2.5 ${
                     task.status === 'completed'
-                      ? 'bg-emerald-950/20 border-emerald-800/40 text-slate-400'
-                      : task.status === 'in_progress'
-                      ? 'bg-blue-950/30 border-blue-800/60 text-slate-200'
-                      : 'bg-slate-950 border-slate-800/80 text-slate-300 hover:border-slate-700'
+                      ? 'bg-emerald-950/20 border-emerald-800/40 text-slate-400 line-through'
+                      : 'bg-slate-950/70 border-slate-800 text-slate-200 hover:border-slate-700'
                   }`}
                 >
-                  <div className={`mt-0.5 h-4 w-4 rounded flex items-center justify-center shrink-0 border ${
-                    task.status === 'completed'
-                      ? 'bg-emerald-500 border-emerald-500 text-slate-950'
-                      : task.status === 'in_progress'
-                      ? 'bg-blue-600 border-blue-500 text-white'
-                      : 'border-slate-600 bg-slate-800'
-                  }`}>
-                    {task.status === 'completed' && <Check className="h-3 w-3 stroke-[3]" />}
-                    {task.status === 'in_progress' && <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />}
-                  </div>
-
+                  <input
+                    type="checkbox"
+                    checked={task.status === 'completed'}
+                    onChange={() => {}} // handled by parent onClick
+                    className="mt-0.5 rounded border-slate-700 text-emerald-500 focus:ring-0 shrink-0 cursor-pointer"
+                  />
                   <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-medium leading-tight ${task.status === 'completed' ? 'line-through text-slate-500' : 'text-slate-200'}`}>
+                    <p className={`font-semibold ${task.status === 'completed' ? 'text-slate-400' : 'text-slate-200'}`}>
                       {task.title}
                     </p>
                     {task.description && (
-                      <p className="text-[11px] text-slate-500 mt-0.5 truncate">{task.description}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5 no-underline">
+                        {task.description}
+                      </p>
                     )}
                   </div>
-
-                  <span className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded ${
-                    task.status === 'completed' 
-                      ? 'bg-emerald-950 text-emerald-400' 
-                      : task.status === 'in_progress' 
-                      ? 'bg-blue-950 text-blue-300' 
-                      : 'bg-slate-800 text-slate-400'
-                  }`}>
-                    {task.status === 'in_progress' ? 'doing' : task.status}
-                  </span>
                 </div>
               ))}
             </div>
 
-            {/* Add Task input */}
-            <form onSubmit={addTask} className="mt-4 pt-3 border-t border-slate-800 flex items-center space-x-2">
+            {/* Add Custom Task Form */}
+            <form onSubmit={addTask} className="pt-3 border-t border-slate-800/80 flex items-center space-x-2">
               <input
                 type="text"
                 value={newTaskTitle}
                 onChange={(e) => setNewTaskTitle(e.target.value)}
                 placeholder="Add custom task..."
-                className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:ring-1 focus:ring-emerald-500"
+                className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <button
                 type="submit"
-                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium"
+                disabled={!newTaskTitle.trim()}
+                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center space-x-1 transition disabled:opacity-40"
               >
                 <Plus className="h-3.5 w-3.5" />
+                <span>Add</span>
               </button>
             </form>
           </div>
 
-          {/* Implementation Timeline */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-md">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4 text-blue-400" />
-                <h3 className="text-sm font-semibold text-slate-200">Implementation Plan</h3>
-              </div>
-              <span className="text-xs font-mono text-slate-400">
-                ~{Math.round(totalMinutes / 60)}h total
-              </span>
-            </div>
-
-            <div className="relative pl-6 space-y-4 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
-              {data.implementation_plan.map((step, idx) => (
-                <div key={idx} className="relative">
-                  <div className="absolute -left-6 top-1 h-4 w-4 rounded-full bg-blue-600 text-[10px] text-white font-bold flex items-center justify-center ring-4 ring-slate-900">
-                    {step.step || idx + 1}
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-semibold text-slate-200">{step.title}</h4>
-                      <span className="text-[10px] font-mono text-slate-400">{step.estimated_minutes}m</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{step.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 2-Minute Judge Demo Flow */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-md">
+          {/* Section 7: 2-Minute Demo Pitch Flow */}
+          <div className="glass-panel rounded-2xl p-6">
             <div className="flex items-center space-x-2 mb-3">
-              <Sparkles className="h-4 w-4 text-amber-400" />
-              <h3 className="text-sm font-semibold text-slate-200">2-Minute Judge Demo Flow</h3>
+              <Sparkles className="h-4.5 w-4.5 text-amber-400" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                2-Minute Demo Flow
+              </h2>
             </div>
-            <p className="text-[11px] text-slate-400 mb-3">
-              Follow this timing sequence to deliver maximum impact within the 2-minute limit:
-            </p>
-            <div className="space-y-2">
-              {data.demo_flow.map((pitch, idx) => (
-                <div key={idx} className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 text-xs text-slate-300">
-                  <span className="font-semibold text-amber-400 mr-1.5">Step {idx + 1}:</span>
-                  <span>{pitch}</span>
+            <div className="space-y-2.5">
+              {(data.demo_flow || []).map((flow, i) => (
+                <div key={i} className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 text-xs">
+                  <span className="font-mono text-amber-300 font-bold mr-1.5">{i + 1}.</span>
+                  <span className="text-slate-300 leading-snug">{flow}</span>
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Section 8: Uncertainties & Ambiguities to Verify */}
+          {(data.uncertainties || []).length > 0 && (
+            <div className="glass-panel rounded-2xl p-6 border-amber-800/40">
+              <div className="flex items-center space-x-2 text-amber-400 mb-3">
+                <AlertTriangle className="h-4.5 w-4.5" />
+                <h2 className="text-sm font-bold uppercase tracking-wider">
+                  Uncertainties to Verify
+                </h2>
+              </div>
+              <ul className="space-y-2">
+                {(data.uncertainties || []).map((u, i) => (
+                  <li key={i} className="text-xs text-amber-200/90 flex items-start space-x-2 leading-relaxed">
+                    <span className="text-amber-400 font-bold">•</span>
+                    <span>{u}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
         </div>
 

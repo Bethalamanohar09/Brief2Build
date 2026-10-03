@@ -3,18 +3,19 @@ import {
   UploadCloud, 
   Image as ImageIcon, 
   X, 
-  RefreshCw, 
   Sparkles, 
   FileText, 
   AlertCircle, 
   ShieldCheck, 
   PlayCircle,
   FileCode2,
-  Trash2
+  Trash2,
+  RefreshCw,
+  ArrowRight
 } from 'lucide-react';
 import { SAMPLE_CHALLENGE_CONTEXT, SAMPLE_CHALLENGE_TEXT } from '../data/sampleChallenge';
 
-export default function UploadCard({ onAnalyze, isAnalyzing, serverStatus, onTrySampleDemo }) {
+export default function UploadCard({ onAnalyze, isAnalyzing, serverStatus }) {
   const [inputMode, setInputMode] = useState('image'); // 'image' | 'text'
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -22,27 +23,14 @@ export default function UploadCard({ onAnalyze, isAnalyzing, serverStatus, onTry
   const [contextText, setContextText] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [loadingStage, setLoadingStage] = useState(1);
   
   const fileInputRef = useRef(null);
-
-  // Cycle loading steps during active analysis
-  React.useEffect(() => {
-    let interval;
-    if (isAnalyzing) {
-      setLoadingStage(1);
-      interval = setInterval(() => {
-        setLoadingStage((prev) => (prev < 4 ? prev + 1 : prev));
-      }, 1500);
-    }
-    return () => clearInterval(interval);
-  }, [isAnalyzing]);
 
   const handleLoadSampleChallenge = async () => {
     setErrorMsg(null);
     if (inputMode === 'image') {
       try {
-        const res = await fetch('/sample-challenge.png');
+        const res = await fetch('/sample-challenge.svg');
         const blob = await res.blob();
         const sampleFile = new File([blob], 'sample-challenge-brief.png', { type: 'image/png' });
         
@@ -112,21 +100,14 @@ export default function UploadCard({ onAnalyze, isAnalyzing, serverStatus, onTry
     }
   };
 
-  const handleRemoveImage = () => {
-    if (previewUrl && previewUrl.startsWith('blob:')) {
+  const handleClearImage = () => {
+    setSelectedFile(null);
+    if (previewUrl && !previewUrl.startsWith('/sample-challenge')) {
       URL.revokeObjectURL(previewUrl);
     }
-    setSelectedFile(null);
     setPreviewUrl(null);
-    setErrorMsg(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
-    }
-  };
-
-  const handleTriggerBrowse = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
     }
   };
 
@@ -148,63 +129,61 @@ export default function UploadCard({ onAnalyze, isAnalyzing, serverStatus, onTry
   const isSubmitReady = inputMode === 'image' ? Boolean(selectedFile) : Boolean(challengeText.trim());
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl shadow-slate-950/50 backdrop-blur-sm">
+    <div className="w-full max-w-4xl mx-auto">
+      <div className="glass-panel rounded-2xl p-6 sm:p-8 relative overflow-hidden">
         
-        {/* Card Header with Mode Toggle & Sample Loader */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-800/80 mb-6 gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 border border-blue-500/20">
-              <UploadCloud className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-slate-100">Input Challenge Specification</h2>
-              <p className="text-xs text-slate-400">Upload screenshot or paste requirements text</p>
-            </div>
+        {/* Card Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-800/80 mb-6 gap-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              Start with your challenge
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400 mt-1">
+              Upload a screenshot or paste your challenge to create a project plan.
+            </p>
           </div>
           
           <button
             type="button"
             onClick={handleLoadSampleChallenge}
-            className="self-start sm:self-auto px-3 py-1.5 rounded-lg bg-indigo-950/70 hover:bg-indigo-900/90 text-indigo-300 text-xs font-medium border border-indigo-700/60 flex items-center space-x-1.5 transition"
-            title="Load sample challenge brief"
+            className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-blue-300 hover:text-blue-200 text-xs font-medium border border-blue-500/20 hover:border-blue-500/40 flex items-center space-x-1.5 transition-all shadow-sm"
           >
-            <PlayCircle className="h-3.5 w-3.5 text-indigo-400" />
+            <PlayCircle className="h-3.5 w-3.5 text-blue-400" />
             <span>Load Sample Challenge</span>
           </button>
         </div>
 
         {/* Input Mode Selector Tabs */}
-        <div className="flex items-center space-x-2 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-6">
+        <div className="flex items-center p-1 bg-slate-950/70 rounded-xl border border-slate-800/90 mb-6 max-w-md">
           <button
             type="button"
             onClick={() => setInputMode('image')}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center space-x-2 transition ${
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center space-x-2 transition-all ${
               inputMode === 'image'
-                ? 'bg-blue-600 text-white shadow-md'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <ImageIcon className="h-4 w-4" />
+            <ImageIcon className="h-3.5 w-3.5" />
             <span>Upload Screenshot</span>
           </button>
           <button
             type="button"
             onClick={() => setInputMode('text')}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center space-x-2 transition ${
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center space-x-2 transition-all ${
               inputMode === 'text'
-                ? 'bg-blue-600 text-white shadow-md'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <FileCode2 className="h-4 w-4" />
+            <FileCode2 className="h-3.5 w-3.5" />
             <span>Paste Challenge Text</span>
           </button>
         </div>
 
         {/* Error message */}
         {errorMsg && (
-          <div className="mb-6 p-3.5 rounded-xl bg-red-950/50 border border-red-800/60 text-red-200 text-xs flex items-center space-x-2.5">
+          <div className="mb-6 p-3.5 rounded-xl bg-red-950/40 border border-red-800/50 text-red-200 text-xs flex items-center space-x-2.5">
             <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
             <span>{errorMsg}</span>
           </div>
@@ -213,7 +192,6 @@ export default function UploadCard({ onAnalyze, isAnalyzing, serverStatus, onTry
         {/* Mode 1: Image Upload / Preview Area */}
         {inputMode === 'image' && (
           <div>
-            {/* Hidden native input */}
             <input 
               type="file" 
               ref={fileInputRef}
@@ -229,89 +207,68 @@ export default function UploadCard({ onAnalyze, isAnalyzing, serverStatus, onTry
             />
 
             {!selectedFile ? (
+              /* Drag-and-drop zone */
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={handleTriggerBrowse}
-                className={`cursor-pointer border-2 border-dashed rounded-xl p-8 sm:p-10 text-center transition-all duration-200 ${
-                  isDragging 
-                    ? 'border-blue-500 bg-blue-950/20 scale-[0.99]' 
-                    : 'border-slate-700/80 hover:border-slate-600 bg-slate-950/40 hover:bg-slate-950/60'
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-200 ${
+                  isDragging
+                    ? 'border-blue-500 bg-blue-500/10 scale-[0.99]'
+                    : 'border-slate-800 hover:border-slate-700 bg-slate-950/40 hover:bg-slate-900/40'
                 }`}
-                tabIndex={0}
-                role="button"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleTriggerBrowse();
-                  }
-                }}
               >
-                <div className="mx-auto w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 mb-4 group-hover:text-slate-200">
-                  <ImageIcon className="h-7 w-7 text-blue-400" />
+                <div className="mx-auto h-12 w-12 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center mb-4 text-blue-400">
+                  <UploadCloud className="h-6 w-6" />
                 </div>
-                <p className="text-base font-medium text-slate-200 mb-1">
-                  Drag & drop your challenge screenshot here
+                <h3 className="text-sm font-semibold text-slate-200 mb-1">
+                  Drop your challenge screenshot here, or <span className="text-blue-400 underline underline-offset-2">browse</span>
+                </h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Supports PNG, JPG, or WEBP up to 10MB. Zero disk persistence for privacy.
                 </p>
-                <p className="text-xs text-slate-400 mb-4">
-                  PNG, JPG, or WEBP (Max 10MB)
-                </p>
-                <button
-                  type="button"
-                  className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-600 transition"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleTriggerBrowse();
-                  }}
-                >
-                  <span>Browse files</span>
-                </button>
               </div>
             ) : (
-              /* Preview State */
-              <div className="border border-slate-700/80 bg-slate-950/60 rounded-xl p-4 sm:p-5">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-                  <div className="flex items-center space-x-3 overflow-hidden">
-                    <div className="h-10 w-10 rounded-lg bg-blue-950/60 border border-blue-800/50 flex items-center justify-center shrink-0">
-                      <ImageIcon className="h-5 w-5 text-blue-400" />
+              /* Selected Image Preview with Replace / Remove controls */
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800/80 mb-4 gap-3">
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 shrink-0">
+                      <ImageIcon className="h-5 w-5" />
                     </div>
                     <div className="truncate">
                       <p className="text-sm font-medium text-slate-200 truncate">{selectedFile.name}</p>
-                      <p className="text-xs text-slate-400 font-mono">
-                        {formatFileSize(selectedFile.size)} • {selectedFile.type.replace('image/', '').toUpperCase()}
-                      </p>
+                      <p className="text-xs text-slate-500">{formatFileSize(selectedFile.size)} • Ready for analysis</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                  <div className="flex items-center space-x-2 shrink-0">
                     <button
                       type="button"
-                      onClick={handleTriggerBrowse}
-                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 flex items-center space-x-1.5 transition"
-                      title="Replace with another image"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center space-x-1.5 transition"
                     >
-                      <RefreshCw className="h-3.5 w-3.5" />
+                      <RefreshCw className="h-3 w-3" />
                       <span>Replace</span>
                     </button>
                     <button
                       type="button"
-                      onClick={handleRemoveImage}
-                      className="px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-300 text-xs font-medium border border-red-800/40 flex items-center space-x-1.5 transition"
-                      title="Remove image"
+                      onClick={handleClearImage}
+                      className="px-3 py-1.5 rounded-lg bg-red-950/30 hover:bg-red-900/50 text-red-300 text-xs font-medium border border-red-800/40 flex items-center space-x-1.5 transition"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3 w-3" />
                       <span>Remove</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Thumbnail Preview */}
-                <div className="mt-4 rounded-lg overflow-hidden border border-slate-800 bg-slate-950 flex items-center justify-center max-h-72">
+                {/* Image Preview Box */}
+                <div className="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-900 flex items-center justify-center max-h-72">
                   <img 
                     src={previewUrl} 
-                    alt="Challenge Specification Preview" 
-                    className="max-h-72 w-auto object-contain mx-auto"
+                    alt="Challenge Preview" 
+                    className="max-h-72 w-auto object-contain rounded-lg"
                   />
                 </div>
               </div>
@@ -319,53 +276,37 @@ export default function UploadCard({ onAnalyze, isAnalyzing, serverStatus, onTry
           </div>
         )}
 
-        {/* Mode 2: Paste Challenge Text Area */}
+        {/* Mode 2: Pasted Text Input Area */}
         {inputMode === 'text' && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label htmlFor="challenge-text-input" className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Pasted Challenge Requirements / Task Description
-              </label>
-              {challengeText && (
-                <button
-                  type="button"
-                  onClick={() => setChallengeText('')}
-                  className="text-xs text-slate-400 hover:text-red-400 flex items-center space-x-1"
-                >
-                  <Trash2 className="h-3 w-3" />
-                  <span>Clear</span>
-                </button>
-              )}
-            </div>
             <textarea
               id="challenge-text-input"
               rows={8}
               value={challengeText}
               onChange={(e) => setChallengeText(e.target.value)}
-              placeholder="Paste your problem statement, challenge requirements, API links, rules, or judging criteria here..."
-              className="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-3 text-xs sm:text-sm text-slate-200 placeholder-slate-500 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition resize-y leading-relaxed"
+              placeholder="Paste your challenge statement, rules, judging rubrics, or requirements text here..."
+              className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition font-mono leading-relaxed"
             />
+            <div className="flex justify-between text-[11px] text-slate-500 px-1">
+              <span>Text will be processed with strict grounding rules</span>
+              <span>{challengeText.length} characters</span>
+            </div>
           </div>
         )}
 
         {/* Optional Context Field */}
         <div className="mt-6">
-          <label htmlFor="context-input" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-            Optional Context or Question
+          <label htmlFor="context-input" className="block text-xs font-semibold text-slate-400 mb-2">
+            Optional Context or Constraints
           </label>
-          <div className="relative">
-            <textarea
-              id="context-input"
-              rows={3}
-              value={contextText}
-              onChange={(e) => setContextText(e.target.value)}
-              placeholder="e.g. Target duration: 24h. We have 3 developers (1 frontend, 1 backend, 1 AI/ML). Focus on MVP reliability and working demo."
-              className="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition resize-none font-sans"
-            />
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
-            Add team constraints, time limits, judging criteria, or specific technical focus.
-          </p>
+          <textarea
+            id="context-input"
+            rows={2}
+            value={contextText}
+            onChange={(e) => setContextText(e.target.value)}
+            placeholder="Team size, time limit, preferred technologies..."
+            className="w-full bg-slate-950/60 border border-slate-800/90 rounded-xl px-4 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition resize-none"
+          />
         </div>
 
         {/* Submit Action */}
@@ -379,63 +320,35 @@ export default function UploadCard({ onAnalyze, isAnalyzing, serverStatus, onTry
             type="button"
             onClick={handleSubmit}
             disabled={!isSubmitReady || isAnalyzing}
-            className={`w-full sm:w-auto px-6 py-3 rounded-xl font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-200 ${
+            className={`w-full sm:w-auto min-w-[200px] px-6 py-3 rounded-xl font-semibold text-sm flex items-center justify-center space-x-2 transition-all duration-200 shadow-md ${
               !isSubmitReady 
-                ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/40' 
+                ? 'bg-slate-800/80 text-slate-500 cursor-not-allowed border border-slate-700/40' 
                 : isAnalyzing
-                ? 'bg-blue-600/50 text-blue-200 cursor-wait'
-                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/25 active:scale-[0.98]'
+                ? 'bg-blue-600/70 text-blue-100 cursor-wait'
+                : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-600/25 hover:shadow-lg hover:shadow-blue-500/35 active:scale-[0.99]'
             }`}
           >
             {isAnalyzing ? (
               <>
-                <RefreshCw className="h-4 w-4 animate-spin text-blue-300" />
-                <span>Running Gemma 4 Pipeline...</span>
+                <RefreshCw className="h-4 w-4 animate-spin text-white" />
+                <span>Analyzing your challenge...</span>
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4 text-amber-300" />
-                <span>Analyze with Gemma 4</span>
+                <Sparkles className="h-4 w-4 text-blue-200" />
+                <span>Analyze Challenge</span>
+                <ArrowRight className="h-4 w-4 ml-1 opacity-70" />
               </>
             )}
           </button>
         </div>
 
-        {/* Multi-stage Progress Indicator when analyzing */}
-        {isAnalyzing && (
-          <div className="mt-6 p-4 rounded-xl bg-slate-950 border border-blue-900/60 text-xs space-y-2.5 animate-pulse">
-            <div className="flex items-center justify-between text-blue-400 font-medium">
-              <span>Gemma 4 Analysis Pipeline</span>
-              <span className="font-mono">Stage {loadingStage} of 4</span>
-            </div>
-            
-            <div className="space-y-1.5 text-slate-400">
-              <div className={`flex items-center space-x-2 ${loadingStage >= 1 ? 'text-blue-300 font-semibold' : 'opacity-40'}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${loadingStage >= 1 ? 'bg-blue-400' : 'bg-slate-700'}`} />
-                <span>1. Validating in-memory payload & headers</span>
-              </div>
-              <div className={`flex items-center space-x-2 ${loadingStage >= 2 ? 'text-blue-300 font-semibold' : 'opacity-40'}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${loadingStage >= 2 ? 'bg-blue-400' : 'bg-slate-700'}`} />
-                <span>2. Sending challenge payload to Gemma 4 via Gemini API</span>
-              </div>
-              <div className={`flex items-center space-x-2 ${loadingStage >= 3 ? 'text-blue-300 font-semibold' : 'opacity-40'}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${loadingStage >= 3 ? 'bg-blue-400' : 'bg-slate-700'}`} />
-                <span>3. Grounding extracted constraints with evidence citations</span>
-              </div>
-              <div className={`flex items-center space-x-2 ${loadingStage >= 4 ? 'text-blue-300 font-semibold' : 'opacity-40'}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${loadingStage >= 4 ? 'bg-blue-400' : 'bg-slate-700'}`} />
-                <span>4. Constructing editable MVP roadmap & checklist</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Helper status if button is disabled */}
+        {/* Clean status note if button is disabled */}
         {!isSubmitReady && !isAnalyzing && (
           <p className="text-center text-xs text-slate-500 mt-3 sm:text-right">
             {inputMode === 'image' 
-              ? 'Upload a screenshot or click "Load Sample Challenge" to test.' 
-              : 'Paste challenge text above or click "Load Sample Challenge" to test.'}
+              ? 'Upload a screenshot or click "Load Sample Challenge" to begin.' 
+              : 'Paste challenge text above or click "Load Sample Challenge" to begin.'}
           </p>
         )}
 

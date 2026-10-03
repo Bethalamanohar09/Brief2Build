@@ -12,6 +12,12 @@ class WebsiteService {
   }
 
   getApiKey() {
+    if (!process.env.GOOGLE_API_KEY && !process.env.GEMINI_API_KEY) {
+      const dotenv = require('dotenv');
+      const path = require('path');
+      dotenv.config({ path: path.resolve(__dirname, '../../../.env'), override: true });
+      dotenv.config({ override: true });
+    }
     return process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || this.apiKey;
   }
 

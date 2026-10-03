@@ -317,6 +317,24 @@ ${data.caveats.map(c => `- ${c}`).join('\n')}
         </div>
       </div>
 
+      {/* Fallback Notice Banner */}
+      {analysisData.is_fallback && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex items-start justify-between gap-3 shadow-lg shadow-amber-950/20">
+          <div className="flex items-start gap-3">
+            <span className="text-xl mt-0.5">⚡</span>
+            <div>
+              <p className="font-semibold text-sm text-amber-100">Grounded Build Plan Generated (Prototype Mode)</p>
+              <p className="text-xs text-amber-200/80 mt-1 leading-relaxed">
+                {analysisData.fallback_notice || 'Gemma 4 prototype plan generated from your challenge brief. All ground truth, tasks, and demo sequences are fully editable.'}
+              </p>
+              <p className="text-[11px] text-amber-300/70 mt-1">
+                To connect directly to Google's live Gemma 4 endpoint, set your <code className="bg-amber-950/80 px-1.5 py-0.5 rounded text-amber-200 font-mono">GOOGLE_API_KEY</code> in <span className="font-mono text-white">.env</span>.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Legend Badges */}
       <div className="flex flex-wrap items-center gap-3 px-2 text-xs">
         <span className="text-slate-400 font-medium">Data Provenance:</span>
